@@ -47,12 +47,22 @@ if domain == "Retail Analytics":
         st.header("Retail Filters")
         cats = st.multiselect("Category", sorted(sales.category.unique()), default=sorted(sales.category.unique()))
         regs = st.multiselect("Region", sorted(sales.region.unique()), default=sorted(sales.region.unique()))
-        lo, hi = sales.order_date.min(), sales.order_date.max()
-        d1, d2 = st.date_input("Date range", (pd.to_datetime(lo), pd.to_datetime(hi)))
+        lo_date = pd.to_datetime(sales.order_date.min()).date()
+        hi_date = pd.to_datetime(sales.order_date.max()).date()
+        date_res = st.date_input("Date range", (lo_date, hi_date))
+        if isinstance(date_res, (tuple, list)):
+            if len(date_res) == 2:
+                d1, d2 = date_res
+            elif len(date_res) == 1:
+                d1 = d2 = date_res[0]
+            else:
+                d1, d2 = lo_date, hi_date
+        else:
+            d1 = d2 = date_res
 
+    order_dates = pd.to_datetime(sales.order_date).dt.date
     f = sales[sales.category.isin(cats) & sales.region.isin(regs)
-              & (pd.to_datetime(sales.order_date) >= pd.to_datetime(d1))
-              & (pd.to_datetime(sales.order_date) <= pd.to_datetime(d2))]
+              & (order_dates >= d1) & (order_dates <= d2)]
 
     orders = f.order_id.nunique()
     k = st.columns(4)
