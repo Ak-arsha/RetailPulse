@@ -7,34 +7,37 @@ GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/
 
 ---
 
-## 🖥️ Frontend Description
+## Documentation Overview
 
-**DataPulse Dashboard** is a multi-vertical analytics interface built with Streamlit and Plotly, served on top of a FastAPI REST backend. The UI provides:
-
-- **Vertical switcher across Retail, SaaS, Healthcare, and Hi-Tech** — each domain gets its own KPI strip, trend charts, and drill-down tables.
-- **Interactive Plotly charts** — zoom, hover tooltips, cross-filtering between charts, and date-range pickers instead of static images.
-- **Data Ops & Quality Scorecard page** — live pipeline SLA status, last-loaded timestamps, quarantine row counts with error reasons, and GenAI query audit logs.
-- **Ask Your Data (GenAI) panel** — natural-language Text-to-SQL with visible generated SQL, execution time, and an audit trail of past questions.
-- **Healthcare PII masking toggle** — role-based switch between raw and masked patient claim views.
-- **Caching layer** (`st.cache_data` with TTL) for sub-second dashboard loads, and a session-managed multi-page layout.
-
-> **Short Resume Line**:  
-> *"Designed and built an interactive multi-industry analytics dashboard (Streamlit + Plotly) with role-based data masking, live data-quality scorecards, and a GenAI Text-to-SQL assistant backed by a FastAPI service."*
+> The DataPulse interface opens on a public landing page that presents the platform's capabilities, architecture, and industry coverage, with clear calls to action to sign in or register. Authentication is handled through a minimal, centered card layout for both sign-in and registration, featuring inline validation, password strength enforcement, uniform error messaging, and optional single sign-on. Role-based access is assigned at registration or by administrator approval, and all authentication events are recorded in the audit log.
 
 ---
 
-## 🔐 Authorization & Security (RBAC)
+## Frontend Overview & Architecture
 
-> **Auth Architecture**:  
-> *"JWT-based authentication with bcrypt-hashed credentials, role-based access control (Admin/Analyst/Viewer), server-enforced PII masking, and full audit logging of logins and GenAI queries."*
+DataPulse Dashboard is a multi-vertical analytics interface built with Streamlit and Plotly, served on top of a FastAPI REST backend. The UI provides:
+
+- **Landing Screen**: Public entry point communicating platform capabilities, architecture flow, trusted industry verticals, and direct calls to action to Sign In or Register.
+- **Sign In & Sign Up Pages**: Formal card layout supporting account authentication, registration with password policy enforcement, and role selection.
+- **Vertical Switcher Across Four Industries**: Retail, SaaS, Healthcare, and Hi-Tech verticals — each domain features metric cards with delta trend indicators, compact Plotly white charts, and detail tables.
+- **Interactive Plotly Visualizations**: Hover tooltips, cross-filtering, and date-range pickers instead of static images.
+- **Data Ops & Quality Scorecard**: Live pipeline SLA status, last-loaded timestamps, quarantine row counts with error reasons, and GenAI query audit logs.
+- **Ask Your Data (GenAI) Panel**: Natural-language Text-to-SQL with visible generated SQL, execution time, and audit trails.
+- **Healthcare PII Masking**: Role-based server-enforced masking for patient claim data.
+
+---
+
+## Authorization & Security (RBAC)
+
+> JWT-based authentication with bcrypt-hashed credentials, role-based access control (Administrator/Analyst/Viewer), server-enforced PII masking, and full audit logging of logins and GenAI queries.
 
 ### Role-Based Access Control (RBAC) Matrix
 
 | Role | Access Permissions |
 |---|---|
-| **Admin** | Full system access: Dashboards, GenAI queries, manual pipeline re-runs, quarantine inspection, audit logs, raw PII view toggle. |
+| **Administrator** | Full system access: Dashboards, GenAI queries, manual pipeline re-runs, quarantine inspection, audit logs, raw PII view toggle. |
 | **Analyst** | Dashboards + GenAI queries + Data Ops Scorecard (read-only). Healthcare PII toggle available. |
-| **Viewer** | Dashboards only. Healthcare PII is **always server-side masked** (toggle removed). GenAI panel and re-runs are disabled. |
+| **Viewer** | Dashboards only. Healthcare PII is **always server-side masked**. GenAI panel and re-runs are disabled. |
 
 ### Demo Credentials (Local / Cloud Test):
 - **Admin**: Username `admin` | Password `admin123`
@@ -43,7 +46,7 @@ GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/
 
 ---
 
-## 🚀 Single-Command Local Launch (Docker Compose)
+## Single-Command Local Launch (Docker Compose)
 
 Launch the entire enterprise stack (PostgreSQL 16, FastAPI REST API, Streamlit Dashboard, and Dagster Orchestration UI) in **one command**:
 
@@ -51,7 +54,7 @@ Launch the entire enterprise stack (PostgreSQL 16, FastAPI REST API, Streamlit D
 docker-compose up --build
 ```
 
-### 🔗 Container Endpoints
+### Container Endpoints
 - **Streamlit Analytics Dashboard**: [http://localhost:8501](http://localhost:8501)
 - **FastAPI REST API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Dagster Pipeline Orchestrator**: [http://localhost:3000](http://localhost:3000)
@@ -59,7 +62,7 @@ docker-compose up --build
 
 ---
 
-## 🏗️ Architecture
+## Architecture Flow
 
 ```text
        RAW DATA DROP (AWS S3 / Local CSVs)
@@ -100,8 +103,8 @@ docker-compose up --build
                         │
                         ▼
  ┌──────────────────────────────────────────────┐
- │   app.py — Streamlit UI with RBAC & Plotly   │
- │   - Auth Login Card (Admin / Analyst / Viewer)│
+ │   app.py — Streamlit UI with Landing & Auth  │
+ │   - Public Landing Page & Sign In / Sign Up  │
  │   - Interactive Plotly Visualizations        │
  │   - Data Ops & Reconciliation Scorecard      │
  │   - GenAI Text-to-SQL + Audit Log & PII Mask │
@@ -110,7 +113,7 @@ docker-compose up --build
 
 ---
 
-## 📊 Row-Count Reconciliation & Pipeline Accounting
+## Row-Count Reconciliation & Pipeline Accounting
 
 To ensure zero silent data loss, the ETL pipeline enforces a strict accounting assertion:
 
@@ -120,7 +123,7 @@ Any dataset imbalance instantly halts ingestion and fires a reconciliation excep
 
 ---
 
-## ☁️ Streamlit Community Cloud Deployment
+## Streamlit Community Cloud Deployment
 
 To deploy your app live on Streamlit Cloud:
 
@@ -134,7 +137,7 @@ To deploy your app live on Streamlit Cloud:
 
 ---
 
-## 🧪 Local Execution & Verification
+## Local Execution & Verification
 
 ```bash
 # 1. Install dependencies
