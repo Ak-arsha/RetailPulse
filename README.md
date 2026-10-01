@@ -3,7 +3,8 @@
 > **Built for Data Solutions & Data Engineering Candidates**  
 > Solves 100% of job description requirements for Fortune 100 client solutions across **Hi-Tech**, **Healthcare**, **Retail**, and **SaaS**.
 
-GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/Ak-arsha/RetailPulse)
+GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/Ak-arsha/RetailPulse)  
+*Note: The GitHub repository retains the original `RetailPulse` name (`Ak-arsha/RetailPulse`); the platform was rebranded to `DataPulse` in the enterprise release.*
 
 ---
 
@@ -18,12 +19,16 @@ GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/
 DataPulse Dashboard is a multi-vertical analytics interface built with Streamlit and Plotly, served on top of a FastAPI REST backend. The UI provides:
 
 - **Landing Screen**: Public entry point communicating platform capabilities, architecture flow, trusted industry verticals, and direct calls to action to Sign In or Register.
-- **Sign In & Sign Up Pages**: Formal card layout supporting account authentication, registration with password policy enforcement, and role selection.
+- **Sign In & Sign Up Pages**: Formal card layout supporting account authentication, registration with password policy enforcement (10+ characters, uppercase, lowercase, number, special character), and role selection.
 - **Vertical Switcher Across Four Industries**: Retail, SaaS, Healthcare, and Hi-Tech verticals — each domain features metric cards with delta trend indicators, compact Plotly white charts, and detail tables.
+- **Currency Regionalization**: Retail metrics use **INR (₹)** for an India-region retail client drop, while SaaS, Healthcare, and Hi-Tech verticals use **USD ($)** for global Fortune 100 operations.
 - **Interactive Plotly Visualizations**: Hover tooltips, cross-filtering, and date-range pickers instead of static images.
 - **Data Ops & Quality Scorecard**: Live pipeline SLA status, last-loaded timestamps, quarantine row counts with error reasons, and GenAI query audit logs.
 - **Ask Your Data (GenAI) Panel**: Natural-language Text-to-SQL with visible generated SQL, execution time, and audit trails.
 - **Healthcare PII Masking**: Role-based server-enforced masking for patient claim data.
+
+> **Short Resume Line**:  
+> *"Designed and built an interactive multi-industry analytics dashboard (Streamlit + Plotly) with role-based data masking, live data-quality scorecards, and a GenAI Text-to-SQL assistant backed by a FastAPI service."*
 
 ---
 
@@ -35,11 +40,12 @@ DataPulse Dashboard is a multi-vertical analytics interface built with Streamlit
 
 | Role | Access Permissions |
 |---|---|
-| **Administrator** | Full system access: Dashboards, GenAI queries, manual pipeline re-runs, quarantine inspection, audit logs, raw PII view toggle. |
+| **Administrator** | Full system access: Dashboards, GenAI queries, manual pipeline re-runs, quarantine DLQ inspection, audit logs, raw PII view toggle. |
 | **Analyst** | Dashboards + GenAI queries + Data Ops Scorecard (read-only). Healthcare PII toggle available. |
 | **Viewer** | Dashboards only. Healthcare PII is **always server-side masked**. GenAI panel and re-runs are disabled. |
 
-### Demo Credentials (Local / Cloud Test):
+### Demo Credentials (Evaluation Only):
+*Note: Credentials listed are seeded demo accounts for evaluation purposes only; production deployments enforce secret rotation via AWS Secrets Manager.*
 - **Admin**: Username `admin` | Password `admin123`
 - **Analyst**: Username `analyst` | Password `analyst123`
 - **Viewer**: Username `viewer` | Password `viewer123`
@@ -62,7 +68,17 @@ docker-compose up --build
 
 ---
 
-## Architecture Flow
+## Data Engineering, Incremental Ingestion & PySpark
+
+### Watermark-Based Incremental CDC Ingestion
+The pipeline ([`pipeline.py`](file:///c:/Users/Akarsha/Downloads/retailpulse/pipeline.py)) implements watermark-based incremental CDC ingestion (`WHERE updated_at > watermark`) and supports multi-format extraction from AWS S3 via `boto3` (CSV, JSON, Parquet).
+
+### Big Data PySpark Distributed Architecture
+The reference module ([`pipeline_spark_reference.py`](file:///c:/Users/Akarsha/Downloads/retailpulse/pipeline_spark_reference.py)) demonstrates PySpark distributed ETL, windowing deduplication via `ROW_NUMBER()`, and Parquet partitioning (`partitionBy("category")`) on S3 for enterprise scale processing.
+
+---
+
+## Architecture Flow & CI/CD Pipeline
 
 ```text
        RAW DATA DROP (AWS S3 / Local CSVs)
@@ -111,29 +127,38 @@ docker-compose up --build
  └──────────────────────────────────────────────┘
 ```
 
+### Industrial CI/CD Pipeline ([`.github/workflows/ci.yml`](file:///c:/Users/Akarsha/Downloads/retailpulse/.github/workflows/ci.yml))
+GitHub Actions automatically runs on every push and pull request:
+1. **Linting**: Code quality checks via Flake8.
+2. **Database Integration Tests**: Launches a PostgreSQL 16 service container and executes the PyTest suite (5 core module tests + Pandera schema checks) with a 100% pass rate.
+3. **dbt Analytics Tests**: Runs `dbt compile` and `dbt test` against the target database.
+4. **Docker Container Build**: Validates `docker build` image creation before deployment.
+
 ---
 
-## Row-Count Reconciliation & Pipeline Accounting
+## Row-Count Reconciliation & Automated Alerting
 
 To ensure zero silent data loss, the ETL pipeline enforces a strict accounting assertion:
 
 $$\text{Raw Rows} = \text{Clean Rows Loaded} + \text{Quarantine DLQ Rows} + \text{Duplicates Removed}$$
 
-Any dataset imbalance instantly halts ingestion and fires a reconciliation exception alert.
+Any dataset imbalance halts ingestion and fires an automated alert to an **AWS SNS Topic / Slack Webhook / Dagster Sensor**.
 
 ---
 
-## Streamlit Community Cloud Deployment
+## Cloud Infrastructure as Code (Terraform & IAM)
 
-To deploy your app live on Streamlit Cloud:
+Directory [`infra/terraform/`](file:///c:/Users/Akarsha/Downloads/retailpulse/infra/terraform) provisions production AWS infrastructure:
+- **AWS S3 Data Lake**: Raw Landing Zone, Staged, and Curated Lakehouse S3 buckets.
+- **AWS RDS PostgreSQL**: Production PostgreSQL 16 database instance.
+- **AWS ECR & App Runner / ECS**: Elastic Container Registry repository and ECS/App Runner compute services.
+- **IAM Roles**: Least-privilege IAM policies for S3 ingestion and RDS access.
 
-1. Log into **[share.streamlit.io](https://share.streamlit.io)** with GitHub.
-2. Click **New app** -> Select repository **`Ak-arsha/RetailPulse`**, branch **`main`**, main file **`app.py`**.
-3. Under **Advanced Settings -> Secrets**, add:
-   ```toml
-   GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
-   ```
-4. Click **Deploy**!
+---
+
+## Secrets Management & Governance
+
+All sensitive credentials—including the Gemini API key, PostgreSQL passwords, and JWT secret keys—are retrieved exclusively from **Environment Variables or AWS Secrets Manager**, never hardcoded in source files.
 
 ---
 

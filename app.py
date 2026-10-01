@@ -304,12 +304,19 @@ if not st.session_state["authenticated"] and st.session_state["view"] == "signup
             submit_signup = st.form_submit_button("Create Account", type="primary", use_container_width=True)
 
             if submit_signup:
+                pwd_valid = (
+                    len(password_reg) >= 10 and
+                    re.search(r"[A-Z]", password_reg) and
+                    re.search(r"[a-z]", password_reg) and
+                    re.search(r"[0-9]", password_reg) and
+                    re.search(r"[!@#$%^&*(),.?\":{}|<>]", password_reg)
+                )
                 if not username_reg or not password_reg:
                     st.error("Please fill in all required fields.")
                 elif password_reg != confirm_pwd:
                     st.error("Passwords do not match.")
-                elif len(password_reg) < 8:
-                    st.error("Password must be at least 8 characters long.")
+                elif not pwd_valid:
+                    st.error("Password must be at least 10 characters long and include an uppercase letter, lowercase letter, number, and special character.")
                 elif not terms_agree:
                     st.error("You must agree to the Terms of Use.")
                 else:
