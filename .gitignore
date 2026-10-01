@@ -1,0 +1,6 @@
+retail.db
+__pycache__/
+*.pyc
+.pytest_cache/
+.streamlit/secrets.toml
+data/raw_orders.csv

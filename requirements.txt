@@ -1,0 +1,7 @@
+pandas
+numpy
+sqlalchemy
+streamlit
+requests
+# psycopg2-binary   # for Postgres (AWS RDS / Supabase) via DATABASE_URL
+# s3fs              # to read raw data from S3 via RAW_S3_URI
