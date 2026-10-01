@@ -528,7 +528,7 @@ elif domain == "Healthcare SLA & Claims":
     st.markdown("<div style='font-size:14px;color:#475569;margin-bottom:12px;font-style:italic;'>Monitors patient claim turnaround hours, 24-hour SLA breach compliance rates, and hospital readmission statistics.</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:12px;color:#64748B;margin-bottom:12px;'>Data last refreshed: {last_refreshed}</div>", unsafe_allow_html=True)
 
-    if user_role == "Viewer":
+    if user_role.lower() == "viewer":
         mask_pii = True
         st.info("Server-Enforced PII Masking: Patient identities are masked for Viewer role.")
     else:
@@ -586,7 +586,7 @@ elif domain == "Hi-Tech Cloud Telemetry":
 # ==========================================================
 st.divider()
 
-if user_role == "Viewer":
+if user_role.lower() == "viewer":
     st.info("Information: Login as Analyst or Admin to access GenAI Text-to-SQL Assistant & Data Quality Audit Scorecard.")
 else:
     t_genai, t_ops = st.tabs(["Ask Your Data (GenAI Assistant)", "Data Ops & Row-Count Reconciliation"])
