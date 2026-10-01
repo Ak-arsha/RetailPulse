@@ -3,12 +3,15 @@ import re
 import pandas as pd
 import requests
 import streamlit as st
+import plotly.express as px
 from sqlalchemy import create_engine
 
-st.set_page_config(page_title="DataPulse — Fortune 100 Multi-Industry Solutions", page_icon="⚡", layout="wide")
-DB_URL = os.getenv("DATABASE_URL", "sqlite:///retail.db")
+st.set_page_config(page_title="DataPulse Production v2", page_icon="⚡", layout="wide")
 
-# Auto-initialize database on first boot if missing
+DB_URL = os.getenv("DATABASE_URL", "sqlite:///retail.db")
+API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY", "datapulse-secret-api-key-2026")
+
 if DB_URL.startswith("sqlite") and not os.path.exists("retail.db"):
     import generate_data
     import pipeline
@@ -23,10 +26,9 @@ def q(sql):
 
 
 # Header
-st.title("⚡ DataPulse — Enterprise Multi-Industry Data Solutions")
-st.caption("Data Engineering, Analytics Dashboards & GenAI Solutions for Fortune 100 Clients (Hi-tech · Healthcare · Retail · SaaS)")
+st.title("⚡ DataPulse Production v2 — Multi-Industry Platform")
+st.caption("Data Engineering, Pandera DLQ, dbt Modeling, Dagster Orchestration, FastAPI & GenAI Solutions")
 
-# Domain Selector
 domain = st.sidebar.radio(
     "Select Client Domain Vertical",
     ["Retail Analytics", "SaaS Subscriptions", "Healthcare SLA & Claims", "Hi-Tech Cloud Telemetry"],
@@ -36,7 +38,7 @@ domain = st.sidebar.radio(
 st.sidebar.divider()
 
 # ==========================================================
-# 1. RETAIL DOMAIN DASHBOARD
+# 1. RETAIL DOMAIN (PLOTLY INTERACTIVE CHARTS)
 # ==========================================================
 if domain == "Retail Analytics":
     sales = q("""SELECT f.*, p.category, p.product_name, c.region
@@ -61,8 +63,7 @@ if domain == "Retail Analytics":
             d1 = d2 = date_res
 
     order_dates = pd.to_datetime(sales.order_date).dt.date
-    f = sales[sales.category.isin(cats) & sales.region.isin(regs)
-              & (order_dates >= d1) & (order_dates <= d2)]
+    f = sales[sales.category.isin(cats) & sales.region.isin(regs) & (order_dates >= d1) & (order_dates <= d2)]
 
     orders = f.order_id.nunique()
     k = st.columns(4)
@@ -71,7 +72,7 @@ if domain == "Retail Analytics":
     k[2].metric("Active Customers", f"{f.customer_id.nunique():,}")
     k[3].metric("Avg Order Value", f"₹{(f.revenue.sum() / max(orders, 1)):,.0f}")
 
-    t0, t1, t2 = st.tabs(["Business Insights", "Sales Performance", "Customer RFM Segmentation"])
+    t0, t1, t2 = st.tabs(["Business Insights", "Sales Performance (Plotly)", "Customer RFM Matrix"])
 
     with t0:
         st.subheader("Fortune 100 Client Business Insights")
@@ -82,44 +83,41 @@ if domain == "Retail Analytics":
         yoy = mon.groupby("yr").revenue.sum()
         peak = mon[mon.mo.isin(["11", "12"])].revenue.mean() / mon[~mon.mo.isin(["11", "12"])].revenue.mean()
         champ = rfm_all[rfm_all.segment == "Champions"]
-        reg = sales.groupby("region").revenue.sum().sort_values(ascending=False)
 
         st.markdown(f"""
-1. **Revenue Drivers**: **{cat.iloc[0].category}** generates **{cat.iloc[0].revenue_share_pct}%** of overall revenue.
-2. **Growth Trajectory**: Revenue shifted from ₹{yoy.iloc[0]:,.0f} ({yoy.index[0]}) to ₹{yoy.iloc[-1]:,.0f} ({yoy.index[-1]}), demonstrating **{(yoy.iloc[-1] / yoy.iloc[0] - 1) * 100:+.1f}%** YoY growth.
-3. **Q4 Seasonality**: Nov–Dec demand spikes **{peak:.2f}x** over baseline months. Recommended action: pre-allocate inventory in Q3.
-4. **Customer Value**: **Champions** account for {len(champ) / len(rfm_all) * 100:.0f}% of total customers but generate **{champ.monetary.sum() / rfm_all.monetary.sum() * 100:.0f}%** of total sales revenue.
-5. **Regional Hierarchy**: Top performing market is **{reg.index[0]}** (₹{reg.iloc[0]:,.0f}), lowest is **{reg.index[-1]}**.
+1. **Revenue Drivers**: **{cat.iloc[0].category}** generates **{cat.iloc[0].revenue_share_pct}%** of revenue.
+2. **YoY Growth**: Revenue moved from ₹{yoy.iloc[0]:,.0f} ({yoy.index[0]}) to ₹{yoy.iloc[-1]:,.0f} ({yoy.index[-1]}), demonstrating **{(yoy.iloc[-1] / yoy.iloc[0] - 1) * 100:+.1f}%** growth.
+3. **Q4 Seasonality**: Nov–Dec demand spikes **{peak:.2f}x** over baseline months.
+4. **Customer Value**: **Champions** account for {len(champ) / len(rfm_all) * 100:.0f}% of customers but generate **{champ.monetary.sum() / rfm_all.monetary.sum() * 100:.0f}%** of revenue.
 """)
 
     with t1:
-        a, b = st.columns(2)
-        a.subheader("Monthly Revenue Trend")
-        a.line_chart(f.groupby("order_month").revenue.sum())
-        b.subheader("Revenue by Category")
-        b.bar_chart(f.groupby("category").revenue.sum())
-        a, b = st.columns(2)
-        a.subheader("Regional Breakdown")
-        a.bar_chart(f.groupby("region").revenue.sum())
-        b.subheader("Top 10 Products")
-        b.dataframe(f.groupby(["product_name", "category"]).revenue.sum().nlargest(10).round(0).reset_index(), hide_index=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Monthly Revenue Trend")
+            df_mon = f.groupby("order_month").revenue.sum().reset_index()
+            fig_mon = px.line(df_mon, x="order_month", y="revenue", title="Monthly Revenue Trend (₹)", markers=True)
+            st.plotly_chart(fig_mon, use_container_width=True)
+        with col2:
+            st.subheader("Revenue by Category")
+            df_cat = f.groupby("category").revenue.sum().reset_index()
+            fig_cat = px.bar(df_cat, x="category", y="revenue", color="category", title="Category Sales Breakdown (₹)")
+            st.plotly_chart(fig_cat, use_container_width=True)
 
     with t2:
         rfm = q("SELECT * FROM v_customer_rfm")
         rep = q("SELECT repeat_rate_pct FROM v_repeat_customers").iat[0, 0]
         st.metric("Repeat Customer Rate", f"{rep}%")
-        seg = rfm.groupby("segment").agg(customers=("customer_id", "count"), revenue=("monetary", "sum")).round(0)
-        a, b = st.columns(2)
-        a.subheader("Customer Distribution by Segment"); a.bar_chart(seg.customers)
-        b.subheader("Revenue Contribution by Segment"); b.bar_chart(seg.revenue)
-        st.dataframe(rfm.sort_values("monetary", ascending=False).head(20), hide_index=True)
+        fig_rfm = px.scatter(rfm, x="recency_days", y="monetary", color="segment", size="frequency",
+                             hover_data=["customer_id"], title="Customer RFM Segmentation Matrix")
+        st.plotly_chart(fig_rfm, use_container_width=True)
 
 
 # ==========================================================
-# 2. SAAS DOMAIN DASHBOARD
+# 2. SAAS DOMAIN (PLOTLY)
 # ==========================================================
 elif domain == "SaaS Subscriptions":
-    st.header("SaaS Subscription Analytics & Retention")
+    st.header("SaaS Subscription Analytics")
     saas = q("SELECT * FROM fact_saas_subscriptions")
     metrics = q("SELECT * FROM v_saas_metrics")
 
@@ -132,126 +130,101 @@ elif domain == "SaaS Subscriptions":
 
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("MRR Distribution by Plan Tier")
-        st.bar_chart(metrics.set_index("tier")["total_mrr"])
+        fig_saas1 = px.bar(metrics, x="tier", y="total_mrr", color="tier", title="MRR by Plan Tier ($)")
+        st.plotly_chart(fig_saas1, use_container_width=True)
     with col2:
-        st.subheader("Subscriber Count by Plan Tier")
-        st.bar_chart(metrics.set_index("tier")["total_customers"])
-
-    st.subheader("Tier Performance Breakdown")
-    st.dataframe(metrics, hide_index=True)
+        fig_saas2 = px.pie(metrics, values="total_customers", names="tier", title="Subscriber Tier Distribution")
+        st.plotly_chart(fig_saas2, use_container_width=True)
 
 
 # ==========================================================
-# 3. HEALTHCARE DOMAIN DASHBOARD
+# 3. HEALTHCARE DOMAIN (WITH PII MASKING TOGGLE)
 # ==========================================================
 elif domain == "Healthcare SLA & Claims":
-    st.header("Healthcare Claim Processing & SLA Metrics")
-    hc_sla = q("SELECT * FROM v_healthcare_sla")
+    st.header("Healthcare Claim SLA & Patient Analytics")
+
+    mask_pii = st.sidebar.checkbox("Mask Sensitive Patient PII", value=True)
     hc_raw = q("SELECT * FROM fact_healthcare_claims")
+    hc_sla = q("SELECT * FROM v_healthcare_sla")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Claims Ingested", f"{len(hc_raw):,}")
     c2.metric("Avg Claim Value", f"${hc_raw.claim_amount.mean():,.2f}")
-    c3.metric("Avg Processing Time", f"{hc_raw.processing_hours.mean():.1f} hrs")
+    c3.metric("Avg Processing Hours", f"{hc_raw.processing_hours.mean():.1f} hrs")
     c4.metric("Overall SLA Breach Rate", f"{(hc_raw[hc_raw.processing_hours > 24].shape[0] / len(hc_raw) * 100):.1f}%")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Avg Processing Hours by Claim Type")
-        st.bar_chart(hc_sla.set_index("claim_type")["avg_processing_hours"])
-    with col2:
-        st.subheader("SLA Breach Rate (%) (>24 Hours)")
-        st.bar_chart(hc_sla.set_index("claim_type")["sla_breach_pct"])
+    fig_hc = px.bar(hc_sla, x="claim_type", y="sla_breach_pct", color="claim_type", title="SLA Breach Rate (%) (>24 Hours)")
+    st.plotly_chart(fig_hc, use_container_width=True)
 
-    st.subheader("Claim SLA Analytics Table")
-    st.dataframe(hc_sla, hide_index=True)
+    if mask_pii:
+        hc_display = hc_raw.copy()
+        hc_display["patient_id"] = "PAT_REDACTED_" + hc_display["patient_id"].str[-3:]
+        st.subheader("Patient Claims (PII Masked)")
+        st.dataframe(hc_display.head(20), hide_index=True)
+    else:
+        st.subheader("Patient Claims (Raw Unmasked)")
+        st.dataframe(hc_raw.head(20), hide_index=True)
 
 
 # ==========================================================
-# 4. HI-TECH DOMAIN DASHBOARD
+# 4. HI-TECH TELEMETRY (PLOTLY)
 # ==========================================================
 elif domain == "Hi-Tech Cloud Telemetry":
-    st.header("Hi-Tech Cloud Telemetry & Infrastructure Performance")
+    st.header("Hi-Tech Microservice Telemetry & Infrastructure")
     ht = q("SELECT * FROM v_hitech_telemetry")
     ht_raw = q("SELECT * FROM fact_hitech_telemetry")
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Microservice Logs Ingested", f"{len(ht_raw):,}")
+    c1.metric("Microservice Logs Ingested", f"{len(ht_raw):,}")
     c2.metric("Avg API Latency", f"{ht_raw.latency_ms.mean():.2f} ms")
     c3.metric("Total Infra Compute Cost", f"${ht_raw.compute_cost.sum():,.2f}")
     c4.metric("Total System Errors", f"{ht_raw.error_count.sum():,}")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Microservice Latency (ms)")
-        st.bar_chart(ht.set_index("service_name")["avg_latency_ms"])
-    with col2:
-        st.subheader("Total Infra Compute Cost ($)")
-        st.bar_chart(ht.set_index("service_name")["total_cost_usd"])
-
-    st.subheader("Microservice Telemetry Metrics")
-    st.dataframe(ht, hide_index=True)
+    fig_ht = px.bar(ht, x="service_name", y="avg_latency_ms", color="service_name", title="Microservice API Response Latency (ms)")
+    st.plotly_chart(fig_ht, use_container_width=True)
 
 
 # ==========================================================
-# COMMON FOOTER TABS: GENAI & PIPELINE HEALTH
+# DATA OPS SCORECARD, RECONCILIATION & GENAI TABS
 # ==========================================================
 st.divider()
-t_genai, t_health = st.tabs(["🤖 Ask Your Data (GenAI Assistant)", "⚙️ Pipeline Health & Data Quality"])
-
-SCHEMA = """Tables available in star schema SQL warehouse:
-- fact_sales(order_id, order_date 'YYYY-MM-DD', order_month 'YYYY-MM', customer_id, product_id, quantity, unit_price, discount, revenue)
-- dim_customer(customer_id, region, city)
-- dim_product(product_id, product_name, category)
-- fact_saas_subscriptions(customer_id, tier, mrr, join_date, churned, seats)
-- fact_healthcare_claims(claim_id, patient_id, claim_type, claim_amount, processing_hours, readmitted, claim_date)
-- fact_hitech_telemetry(log_id, service_name, latency_ms, compute_cost, error_count, log_date)
-Views: v_monthly_revenue, v_category_performance, v_customer_rfm, v_repeat_customers, v_saas_metrics, v_healthcare_sla, v_hitech_telemetry."""
-
-
-def safe_select(sql):
-    s = sql.strip().rstrip(";")
-    if ";" in s or not re.match(r"(?is)^\s*(select|with)\b", s):
-        return None
-    if re.search(r"(?i)\b(insert|update|delete|drop|alter|create|attach|pragma|replace)\b", s):
-        return None
-    return s
-
+t_genai, t_ops = st.tabs(["🤖 Ask Your Data (GenAI Assistant)", "⚙️ Data Ops & Row-Count Reconciliation"])
 
 with t_genai:
-    st.subheader("Generative AI Query & Business Intelligence Engine")
-    st.write("Convert plain-English business requests into validated SQL queries executed live against the warehouse.")
+    st.subheader("Generative AI Query Engine (Google Gemini)")
+    st.write("Convert business questions into validated SQL queries executed securely against the database.")
+    user_q = st.text_input("Enter business question (e.g. Which region had the highest revenue?)")
+    if user_q:
+        try:
+            from genai.engine import generate_and_validate_sql
+            res = generate_and_validate_sql(user_q, engine)
+            if res["status"] == "success":
+                st.code(res["sql"], language="sql")
+                st.dataframe(pd.DataFrame(res["data"]), hide_index=True)
+            elif res["status"] == "warning":
+                st.info(res["message"])
+            else:
+                st.error(res["message"])
+        except Exception as e:
+            st.error(f"GenAI execution error: {e}")
 
-    try:
-        key = os.getenv("GEMINI_API_KEY") or st.secrets["GEMINI_API_KEY"]
-    except Exception:
-        key = os.getenv("GEMINI_API_KEY", "")
-
-    question = st.text_input("Enter business query (e.g. Which microservice has the highest API latency?)")
-    if question:
-        if not key:
-            st.info("💡 Set GEMINI_API_KEY environment variable or Streamlit secret to activate live LLM querying.")
-        else:
-            model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-            prompt = (f"You write one SQLite SELECT query based on this database schema:\n{SCHEMA}\n"
-                      f"Return ONLY the SQL block, with no markdown formatting.\nQuestion: {question}")
-            try:
-                r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                                  params={"key": key}, timeout=30,
-                                  json={"contents": [{"parts": [{"text": prompt}]}]})
-                sql = r.json()["candidates"][0]["content"]["parts"][0]["text"].replace("```sql", "").replace("```", "").strip()
-                ok = safe_select(sql)
-                st.code(sql, language="sql")
-                if ok:
-                    st.dataframe(pd.read_sql(ok, engine), hide_index=True)
-                else:
-                    st.error("Blocked: Only single read-only SELECT queries are allowed.")
-            except Exception as e:
-                st.error(f"LLM call execution error: {e}")
-
-with t_health:
-    st.subheader("ETL Data Quality & Execution Logs")
-    runs = q("SELECT * FROM pipeline_runs ORDER BY run_at DESC")
+with t_ops:
+    st.subheader("Row-Count Reconciliation & Pipeline Accounting")
+    runs = q("SELECT * FROM pipeline_runs ORDER BY run_at DESC LIMIT 5")
     st.dataframe(runs, hide_index=True)
-    st.caption("Data Quality validation logs track row counts, null values handled, duplicates removed, and processing time.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Quarantine Dead-Letter Queue (DLQ)")
+        try:
+            quarantine = q("SELECT * FROM quarantine_records ORDER BY quarantined_at DESC LIMIT 10")
+            st.dataframe(quarantine, hide_index=True)
+        except Exception:
+            st.info("No quarantine records logged.")
+    with col2:
+        st.subheader("GenAI Query Audit Log")
+        try:
+            audit = q("SELECT * FROM genai_query_audit ORDER BY queried_at DESC LIMIT 10")
+            st.dataframe(audit, hide_index=True)
+        except Exception:
+            st.info("No GenAI audit logs recorded yet.")

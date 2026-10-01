@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: fct_sales
+    description: "Retail sales fact table with calculated revenue and transaction attributes."
+    columns:
+      - name: order_id
+        description: "Primary key for retail order"
+        tests:
+          - not_null
+      - name: customer_id
+        description: "Foreign key to dim_customer"
+        tests:
+          - not_null
+      - name: revenue
+        description: "Calculated sales revenue"
+        tests:
+          - not_null
+
+  - name: v_customer_rfm
+    description: "Customer RFM segmentation using SQL window functions NTILE(4)."
+    columns:
+      - name: customer_id
+        description: "Customer ID key"
+        tests:
+          - unique
+          - not_null
+      - name: segment
+        description: "RFM Segment"
+        tests:
+          - accepted_values:
+              values: ['Champions', 'Active', 'At risk', 'Dormant']
+
+  - name: v_saas_metrics
+    description: "SaaS subscription MRR rollups and churn rates by plan tier."
+    columns:
+      - name: tier
+        description: "SaaS Plan Tier"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Starter', 'Professional', 'Enterprise']
+
+  - name: v_healthcare_sla
+    description: "Healthcare claim processing hours and SLA breach rates."
+    columns:
+      - name: claim_type
+        description: "Healthcare claim type"
+        tests:
+          - not_null
+
+  - name: v_hitech_telemetry
+    description: "Hi-Tech microservice API response latency ms and compute cost."
+    columns:
+      - name: service_name
+        description: "Microservice name"
+        tests:
+          - not_null

@@ -1,7 +1,15 @@
 pandas
 numpy
 sqlalchemy
+psycopg2-binary
 streamlit
+plotly
+fastapi
+uvicorn
+pydantic
+pandera
+dagster
+dagster-webserver
 requests
-# psycopg2-binary   # for Postgres (AWS RDS / Supabase) via DATABASE_URL
-# s3fs              # to read raw data from S3 via RAW_S3_URI
+boto3
+pytest

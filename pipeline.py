@@ -1,9 +1,14 @@
-"""ETL: extract multi-domain raw CSVs -> clean/validate -> load star schema -> build SQL analytics views.
-Supports local SQLite or cloud Postgres/Supabase/AWS RDS via DATABASE_URL."""
+"""
+ETL Pipeline Engine with Pandera Data Quality Validation,
+Quarantine DLQ Routing, and Row-Count Reconciliation Assertions.
+"""
 import os
 import time
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from db.schema import get_engine, init_db
+from db.scd2 import process_scd2_customers
+from validation.schemas import validate_retail_data
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:///retail.db")
 
@@ -19,32 +24,47 @@ def extract(path):
     return pd.read_csv(uri if uri else path)
 
 
-def transform_retail(df):
-    df = df.copy()
-    r = {"raw_rows": len(df)}
-    df = df.drop_duplicates().copy()
-    r["duplicates_removed"] = r["raw_rows"] - len(df)
+def transform_retail_with_reconciliation(df):
+    """
+    Transforms raw retail data and enforces strict Row-Count Reconciliation Assertion:
+    raw_rows == clean_rows + quarantine_rows + duplicate_rows
+    """
+    raw_rows = len(df)
+    clean_df, quarantine_df, duplicates_count = validate_retail_data(df)
 
+    # Transform clean DataFrame
     for c in ("category", "region", "city", "product_name"):
-        df[c] = df[c].astype("string").str.strip().str.title()
-    r["null_region_filled"] = int(df["region"].isna().sum())
-    df["region"] = df["region"].fillna("Unknown")
+        clean_df[c] = clean_df[c].astype("string").str.strip().str.title()
+    clean_df["region"] = clean_df["region"].fillna("Unknown")
 
-    df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce")
-    before = len(df)
-    df = df.dropna(subset=["order_date", "customer_id", "product_id", "order_id"]).copy()
-    df = df[(df["quantity"] > 0) & (df["unit_price"] > 0)].copy()
-    r["invalid_rows_dropped"] = before - len(df)
+    clean_df["order_date"] = pd.to_datetime(clean_df["order_date"])
+    clean_df["revenue"] = (clean_df["quantity"] * clean_df["unit_price"] * (1 - clean_df["discount"])).round(2)
+    clean_df["order_month"] = clean_df["order_date"].dt.strftime("%Y-%m")
+    clean_df["order_day"] = (clean_df["order_date"] - pd.Timestamp("2000-01-01")).dt.days
+    clean_df["order_date"] = clean_df["order_date"].dt.strftime("%Y-%m-%d")
+    clean_df["created_at"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    df["revenue"] = (df["quantity"] * df["unit_price"] * (1 - df["discount"])).round(2)
-    df["order_month"] = df["order_date"].dt.strftime("%Y-%m")
-    df["order_day"] = (df["order_date"] - pd.Timestamp("2000-01-01")).dt.days
-    df["order_date"] = df["order_date"].dt.strftime("%Y-%m-%d")
+    clean_rows = len(clean_df)
+    quarantine_rows = len(quarantine_df)
 
-    assert df[["order_id", "customer_id", "product_id"]].notna().all().all(), "null keys in retail"
-    assert (df["revenue"] >= 0).all(), "negative revenue in retail"
-    r["clean_rows"] = len(df)
-    return df, r
+    # ==========================================================
+    # ROW-COUNT RECONCILIATION CHECK ASSERTION
+    # ==========================================================
+    reconciled_total = clean_rows + quarantine_rows + duplicates_count
+    assert raw_rows == reconciled_total, (
+        f"Row-Count Reconciliation Failed! Raw ({raw_rows}) != "
+        f"Clean ({clean_rows}) + Quarantine ({quarantine_rows}) + Duplicates ({duplicates_count})"
+    )
+
+    report = {
+        "raw_rows": raw_rows,
+        "clean_rows": clean_rows,
+        "quarantine_rows": quarantine_rows,
+        "duplicates_removed": duplicates_count,
+        "reconciled": True
+    }
+
+    return clean_df, quarantine_df, report
 
 
 def transform_saas(df):
@@ -54,6 +74,7 @@ def transform_saas(df):
     df = df[df["mrr"] >= 0].copy()
     df["join_date"] = df["join_date"].dt.strftime("%Y-%m-%d")
     df["churned"] = df["churned"].astype(int)
+    df["created_at"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
     return df
 
 
@@ -64,6 +85,7 @@ def transform_healthcare(df):
     df = df[df["claim_amount"] >= 0].copy()
     df["claim_date"] = df["claim_date"].dt.strftime("%Y-%m-%d")
     df["readmitted"] = df["readmitted"].astype(int)
+    df["created_at"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
     return df
 
 
@@ -73,27 +95,30 @@ def transform_hitech(df):
     df = df.dropna(subset=["log_date", "log_id"]).copy()
     df = df[df["latency_ms"] >= 0].copy()
     df["log_date"] = df["log_date"].dt.strftime("%Y-%m-%d")
+    df["created_at"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
     return df
 
 
-def load(df_retail, df_saas, df_hc, df_hitech, engine):
-    dim_customer = (df_retail.groupby("customer_id")
-                    .agg(region=("region", lambda s: s.mode().iat[0]),
-                         city=("city", lambda s: s.mode().iat[0])).reset_index())
+def load(df_retail, df_quarantine, df_saas, df_hc, df_hitech, engine):
+    dim_customer_scd2 = process_scd2_customers(df_retail)
+
     dim_product = (df_retail.groupby("product_id")
                    .agg(product_name=("product_name", "first"),
                         category=("category", "first")).reset_index())
+
     fact_retail = df_retail[["order_id", "order_date", "order_month", "order_day", "customer_id",
-                             "product_id", "quantity", "unit_price", "discount", "revenue"]]
+                             "product_id", "quantity", "unit_price", "discount", "revenue", "created_at"]]
 
     with engine.begin() as con:
-        for name, t in (("dim_customer", dim_customer),
-                        ("dim_product", dim_product),
-                        ("fact_sales", fact_retail),
-                        ("fact_saas_subscriptions", df_saas),
-                        ("fact_healthcare_claims", df_hc),
-                        ("fact_hitech_telemetry", df_hitech)):
-            t.to_sql(name, con, if_exists="replace", index=False)
+        dim_customer_scd2.to_sql("dim_customer", con, if_exists="replace", index=False)
+        dim_product.to_sql("dim_product", con, if_exists="replace", index=False)
+        fact_retail.to_sql("fact_sales", con, if_exists="replace", index=False)
+        df_saas.to_sql("fact_saas_subscriptions", con, if_exists="replace", index=False)
+        df_hc.to_sql("fact_healthcare_claims", con, if_exists="replace", index=False)
+        df_hitech.to_sql("fact_hitech_telemetry", con, if_exists="replace", index=False)
+
+        if len(df_quarantine) > 0:
+            df_quarantine.to_sql("quarantine_records", con, if_exists="append", index=False)
 
         for stmt in open("sql/analytics.sql").read().split(";"):
             if stmt.strip():
@@ -102,27 +127,24 @@ def load(df_retail, df_saas, df_hc, df_hitech, engine):
 
 def run():
     t0 = time.time()
-    engine = create_engine(DB_URL)
+    engine = get_engine(DB_URL)
+    init_db(engine)
 
     df_ret_raw = extract(RAW_RETAIL)
-    df_ret_clean, report = transform_retail(df_ret_raw)
+    df_ret_clean, df_quarantine, report = transform_retail_with_reconciliation(df_ret_raw)
 
-    df_saas_raw = extract(RAW_SAAS)
-    df_saas_clean = transform_saas(df_saas_raw)
+    df_saas_clean = transform_saas(extract(RAW_SAAS))
+    df_hc_clean = transform_healthcare(extract(RAW_HEALTHCARE))
+    df_ht_clean = transform_hitech(extract(RAW_HITECH))
 
-    df_hc_raw = extract(RAW_HEALTHCARE)
-    df_hc_clean = transform_healthcare(df_hc_raw)
-
-    df_ht_raw = extract(RAW_HITECH)
-    df_ht_clean = transform_hitech(df_ht_raw)
-
-    load(df_ret_clean, df_saas_clean, df_hc_clean, df_ht_clean, engine)
+    load(df_ret_clean, df_quarantine, df_saas_clean, df_hc_clean, df_ht_clean, engine)
 
     report["seconds"] = round(time.time() - t0, 2)
     report["run_at"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+
     pd.DataFrame([report]).to_sql("pipeline_runs", engine, if_exists="append", index=False)
 
-    print("Pipeline OK:", report)
+    print("Pipeline OK (Reconciled 100%):", report)
     return report
 
 

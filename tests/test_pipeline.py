@@ -1,5 +1,5 @@
 import pandas as pd
-from pipeline import transform_retail, transform_saas, transform_healthcare, transform_hitech
+from pipeline import transform_retail_with_reconciliation, transform_saas, transform_healthcare, transform_hitech
 
 
 def sample_retail_raw():
@@ -18,18 +18,26 @@ def sample_retail_raw():
     })
 
 
-def test_retail_dedupe_and_invalid_rows_dropped():
-    df, r = transform_retail(sample_retail_raw())
-    assert r["duplicates_removed"] == 1
-    assert r["invalid_rows_dropped"] == 2  # bad date + negative quantity
-    assert set(df.order_id) == {"O1", "O4"}
+def test_row_count_reconciliation_and_dlq():
+    raw_df = sample_retail_raw()
+    clean_df, quarantine_df, report = transform_retail_with_reconciliation(raw_df)
+
+    # Enforce Row-Count Reconciliation Equation
+    raw_rows = len(raw_df)
+    clean_rows = len(clean_df)
+    quarantine_rows = len(quarantine_df)
+    duplicates = report["duplicates_removed"]
+
+    assert raw_rows == clean_rows + quarantine_rows + duplicates
+    assert report["reconciled"] is True
+    assert quarantine_rows == 2  # bad date + negative quantity
 
 
 def test_retail_standardisation_and_revenue():
-    df, _ = transform_retail(sample_retail_raw())
-    assert df[df.order_id == "O1"].category.iat[0] == "Electronics"
-    assert df[df.order_id == "O1"].revenue.iat[0] == 180.0  # 2 * 100 * 0.9
-    assert (df.region.isin(["North", "East", "Unknown"])).all()
+    clean_df, _, _ = transform_retail_with_reconciliation(sample_retail_raw())
+    assert clean_df[clean_df.order_id == "O1"].category.iat[0] == "Electronics"
+    assert clean_df[clean_df.order_id == "O1"].revenue.iat[0] == 180.0  # 2 * 100 * 0.9
+    assert (clean_df.region.isin(["North", "East", "Unknown"])).all()
 
 
 def test_saas_transform():

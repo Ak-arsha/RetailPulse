@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: datapulse_postgres
+    environment:
+      POSTGRES_DB: datapulse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init_roles.sql:/docker-entrypoint-initdb.d/init_roles.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d datapulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datapulse_api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - DATABASE_URL=postgresql://datapulse_admin:adminpassword@postgres:5432/datapulse
+      - READONLY_DATABASE_URL=postgresql://datapulse_readonly:readonlypassword@postgres:5432/datapulse
+      - API_KEY=datapulse-secret-api-key-2026
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datapulse_streamlit
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    environment:
+      - DATABASE_URL=postgresql://datapulse_admin:adminpassword@postgres:5432/datapulse
+      - API_URL=http://api:8000
+      - API_KEY=datapulse-secret-api-key-2026
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+  dagster:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datapulse_dagster
+    command: dagster dev -h 0.0.0.0 -p 3000 -f orchestration/dagster_pipeline.py
+    environment:
+      - DATABASE_URL=postgresql://datapulse_admin:adminpassword@postgres:5432/datapulse
+      - DAGSTER_HOME=/app/orchestration
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
