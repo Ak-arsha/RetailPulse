@@ -73,10 +73,11 @@ def q(sql):
     return pd.read_sql(sql, engine)
 
 
-# Auto-initialize DB on boot
+# Auto-initialize DB schema & create missing tables on boot
+import db.schema
+db.schema.init_db(engine)
+
 if DB_URL.startswith("sqlite") and not os.path.exists("retail.db"):
-    import db.schema
-    db.schema.init_db(engine)
     import generate_data
     import pipeline
     pipeline.run()
@@ -315,11 +316,22 @@ if not st.session_state["authenticated"] and st.session_state["view"] == "signup
                     try:
                         pwd_hash = hash_password(password_reg.strip())
                         now_str = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-                        with engine.begin() as con:
-                            con.execute(
-                                text("INSERT INTO users (username, hashed_password, role, is_active, created_at) VALUES (:u, :p, :r, 1, :c)"),
-                                {"u": username_reg.strip(), "p": pwd_hash, "r": role_reg.capitalize(), "c": now_str}
-                            )
+                        try:
+                            with engine.begin() as con:
+                                con.execute(
+                                    text("INSERT INTO users (username, hashed_password, role, is_active, created_at) VALUES (:u, :p, :r, 1, :c)"),
+                                    {"u": username_reg.strip(), "p": pwd_hash, "r": role_reg.capitalize(), "c": now_str}
+                                )
+                        except Exception:
+                            # Table might be missing on legacy DB - re-initialize schema and retry
+                            import db.schema
+                            db.schema.init_db(engine)
+                            with engine.begin() as con:
+                                con.execute(
+                                    text("INSERT INTO users (username, hashed_password, role, is_active, created_at) VALUES (:u, :p, :r, 1, :c)"),
+                                    {"u": username_reg.strip(), "p": pwd_hash, "r": role_reg.capitalize(), "c": now_str}
+                                )
+
                         st.session_state["authenticated"] = True
                         st.session_state["username"] = username_reg.strip()
                         st.session_state["user_role"] = role_reg.capitalize()
