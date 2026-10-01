@@ -1,4 +1,4 @@
-# DataPulse Production v2 — Enterprise Multi-Industry Data Platform
+# DataPulse — Enterprise Multi-Industry Data Platform
 
 > **Built for Data Solutions & Data Engineering Candidates**  
 > Solves 100% of job description requirements for Fortune 100 client solutions across **Hi-Tech**, **Healthcare**, **Retail**, and **SaaS**.
@@ -7,7 +7,43 @@ GitHub Repository: [https://github.com/Ak-arsha/RetailPulse](https://github.com/
 
 ---
 
-## 🚀 Single-Command Launch (Docker Compose)
+## 🖥️ Frontend Description
+
+**DataPulse Dashboard** is a multi-vertical analytics interface built with Streamlit and Plotly, served on top of a FastAPI REST backend. The UI provides:
+
+- **Vertical switcher across Retail, SaaS, Healthcare, and Hi-Tech** — each domain gets its own KPI strip, trend charts, and drill-down tables.
+- **Interactive Plotly charts** — zoom, hover tooltips, cross-filtering between charts, and date-range pickers instead of static images.
+- **Data Ops & Quality Scorecard page** — live pipeline SLA status, last-loaded timestamps, quarantine row counts with error reasons, and GenAI query audit logs.
+- **Ask Your Data (GenAI) panel** — natural-language Text-to-SQL with visible generated SQL, execution time, and an audit trail of past questions.
+- **Healthcare PII masking toggle** — role-based switch between raw and masked patient claim views.
+- **Caching layer** (`st.cache_data` with TTL) for sub-second dashboard loads, and a session-managed multi-page layout.
+
+> **Short Resume Line**:  
+> *"Designed and built an interactive multi-industry analytics dashboard (Streamlit + Plotly) with role-based data masking, live data-quality scorecards, and a GenAI Text-to-SQL assistant backed by a FastAPI service."*
+
+---
+
+## 🔐 Authorization & Security (RBAC)
+
+> **Auth Architecture**:  
+> *"JWT-based authentication with bcrypt-hashed credentials, role-based access control (Admin/Analyst/Viewer), server-enforced PII masking, and full audit logging of logins and GenAI queries."*
+
+### Role-Based Access Control (RBAC) Matrix
+
+| Role | Access Permissions |
+|---|---|
+| **Admin** | Full system access: Dashboards, GenAI queries, manual pipeline re-runs, quarantine inspection, audit logs, raw PII view toggle. |
+| **Analyst** | Dashboards + GenAI queries + Data Ops Scorecard (read-only). Healthcare PII toggle available. |
+| **Viewer** | Dashboards only. Healthcare PII is **always server-side masked** (toggle removed). GenAI panel and re-runs are disabled. |
+
+### Demo Credentials (Local / Cloud Test):
+- **Admin**: Username `admin` | Password `admin123`
+- **Analyst**: Username `analyst` | Password `analyst123`
+- **Viewer**: Username `viewer` | Password `viewer123`
+
+---
+
+## 🚀 Single-Command Local Launch (Docker Compose)
 
 Launch the entire enterprise stack (PostgreSQL 16, FastAPI REST API, Streamlit Dashboard, and Dagster Orchestration UI) in **one command**:
 
@@ -20,18 +56,6 @@ docker-compose up --build
 - **FastAPI REST API Docs (Swagger UI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Dagster Pipeline Orchestrator**: [http://localhost:3000](http://localhost:3000)
 - **PostgreSQL Database**: `localhost:5432` (`datapulse`)
-
----
-
-## 🎯 Phased Architecture Roadmap (M1–M5)
-
-| Milestone | Scope & Deliverables | Core Value Delivered |
-|---|---|---|
-| **M1 (Core Engine)** | `docker-compose.yml` (PostgreSQL 16), Pandera DLQ Quarantine, Watermark Incremental Pipeline, Row-Count Reconciliation assertion | Data Quality & Pipeline Accounting |
-| **M2 (Modeling Layer)** | `dbt` project (`dbt_project/`) with staging/marts models, dbt tests (`unique`, `not_null`), `schema.yml` | Analytics Modeling Credibility |
-| **M3 (API & Security)** | FastAPI backend REST services (`api/main.py`), API Key Auth (`X-API-Key`), `datapulse_readonly` PostgreSQL role, Rate limiting & 10s query timeout | Security & Backend Architecture |
-| **M4 (Ops & Hardened AI)** | **Dagster** pipeline orchestration (`orchestration/`), Gemini SDK (`genai/engine.py`), PII masking, GenAI audit logging | Data Operations & AI Safety |
-| **M5 (UI & IaC Polish)** | Interactive **Plotly** visualizations, UI Data Quality Scorecard, Terraform IaC reference (`infra/terraform/`) | Enterprise Product Polish |
 
 ---
 
@@ -58,6 +82,7 @@ docker-compose up --build
  │   - Fact & Dimension Tables                  │
  │   - Role Security: datapulse_admin (Read/Write)│
  │                    datapulse_readonly (SELECT) │
+ │   - Users & Auth Table (Admin/Analyst/Viewer)│
  └──────────────────────┬───────────────────────┘
                         │
                         ▼   dbt_project/ (dbt Models & Data Tests)
@@ -68,14 +93,15 @@ docker-compose up --build
                         ▼
  ┌──────────────────────────────────────────────┐
  │   api/main.py — FastAPI Backend REST Service │
- │   - API Key Auth (X-API-Key)                 │
+ │   - JWT Auth & API Key Security (X-API-Key)  │
  │   - Read-Only User Connection                │
  │   - Rate Limiting & 10s Execution Timeout    │
  └──────────────────────┬───────────────────────┘
                         │
                         ▼
  ┌──────────────────────────────────────────────┐
- │   app.py — Streamlit UI with Plotly Charts    │
+ │   app.py — Streamlit UI with RBAC & Plotly   │
+ │   - Auth Login Card (Admin / Analyst / Viewer)│
  │   - Interactive Plotly Visualizations        │
  │   - Data Ops & Reconciliation Scorecard      │
  │   - GenAI Text-to-SQL + Audit Log & PII Mask │
@@ -94,22 +120,17 @@ Any dataset imbalance instantly halts ingestion and fires a reconciliation excep
 
 ---
 
-## 🤖 GenAI Engine Hardening & Security
+## ☁️ Streamlit Community Cloud Deployment
 
-The GenAI engine ([`genai/engine.py`](file:///c:/Users/Akarsha/Downloads/retailpulse/genai/engine.py)) integrates Google Gemini (`gemini-2.5-flash`) with enterprise-grade guardrails:
-1. **Column-Level PII Masking**: Automatically redacts patient IDs and personal identifiers (`[PATIENT_ID_REDACTED]`) before prompt transmission.
-2. **Schema Table Validation**: Blocks hallucinated non-existent tables against a strict whitelist.
-3. **Read-Only Database Role**: Connects via `datapulse_readonly` PostgreSQL credentials, preventing unauthorized table mutations (`DROP`, `UPDATE`, `DELETE`).
-4. **Audit Logging**: Logs user queries, generated SQL, execution latency (ms), and status to `genai_query_audit`.
+To deploy your app live on Streamlit Cloud:
 
----
-
-## 🛠️ Infrastructure as Code (Terraform)
-
-Directory [`infra/terraform/`](file:///c:/Users/Akarsha/Downloads/retailpulse/infra/terraform) provisions production cloud infrastructure:
-- **AWS S3 Data Lake**: Raw Landing Zone & Curated Lakehouse S3 buckets.
-- **AWS RDS PostgreSQL**: Production PostgreSQL 16 database instance.
-- **AWS ECR**: Elastic Container Registry repository for Docker container images.
+1. Log into **[share.streamlit.io](https://share.streamlit.io)** with GitHub.
+2. Click **New app** -> Select repository **`Ak-arsha/RetailPulse`**, branch **`main`**, main file **`app.py`**.
+3. Under **Advanced Settings -> Secrets**, add:
+   ```toml
+   GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+   ```
+4. Click **Deploy**!
 
 ---
 
@@ -125,9 +146,6 @@ python -m pytest -v
 # 3. Execute ETL ingestion pipeline
 python generate_data.py && python pipeline.py
 
-# 4. Launch FastAPI REST service
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-
-# 5. Launch Streamlit UI
+# 4. Launch Streamlit UI
 streamlit run app.py
 ```

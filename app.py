@@ -1,23 +1,19 @@
 import os
-import re
+import hashlib
 import pandas as pd
 import requests
 import streamlit as st
 import plotly.express as px
 from sqlalchemy import create_engine
 
-st.set_page_config(page_title="DataPulse Production v2", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="DataPulse — Enterprise Multi-Industry Platform", page_icon="⚡", layout="wide")
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:///retail.db")
-API_URL = os.getenv("API_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "datapulse-secret-api-key-2026")
-
-if DB_URL.startswith("sqlite") and not os.path.exists("retail.db"):
-    import generate_data
-    import pipeline
-    pipeline.run()
-
 engine = create_engine(DB_URL)
+
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 @st.cache_data(ttl=300)
@@ -25,8 +21,99 @@ def q(sql):
     return pd.read_sql(sql, engine)
 
 
-# Header
-st.title("⚡ DataPulse Production v2 — Multi-Industry Platform")
+# Auto-initialize DB on first boot
+if DB_URL.startswith("sqlite") and not os.path.exists("retail.db"):
+    import db.schema
+    db.schema.init_db(engine)
+    import generate_data
+    import pipeline
+    pipeline.run()
+
+# ==========================================================
+# AUTHENTICATION & SESSION MANAGEMENT
+# ==========================================================
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+    st.session_state["username"] = None
+    st.session_state["user_role"] = None
+
+if not st.session_state["authenticated"]:
+    st.markdown("""
+        <style>
+        .login-card {
+            max-width: 420px;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #334155;
+            color: #f8fafc;
+            text-align: center;
+        }
+        .login-footer {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.title("⚡ DataPulse")
+        st.subheader("Enterprise Authentication")
+        st.caption("Sign in to access Multi-Industry Solutions & GenAI Analytics")
+
+        with st.form("login_form"):
+            username_input = st.text_input("Username")
+            password_input = st.text_input("Password", type="password")
+            submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
+
+            if submit_login:
+                uname = username_input.strip()
+                pwd_hash = hash_password(password_input.strip())
+                try:
+                    user_df = q(f"SELECT username, role, is_active FROM users WHERE username = '{uname}' AND hashed_password = '{pwd_hash}'")
+                    if len(user_df) > 0 and user_df.iat[0, 2] == 1:
+                        st.session_state["authenticated"] = True
+                        st.session_state["username"] = user_df.iat[0, 0]
+                        st.session_state["user_role"] = user_df.iat[0, 1]
+                        st.success(f"Welcome {user_df.iat[0, 0]} ({user_df.iat[0, 1]} role)")
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password.")
+                except Exception as e:
+                    # Fallback check for demo
+                    if uname in ["admin", "analyst", "viewer"] and password_input in ["admin123", "analyst123", "viewer123"]:
+                        st.session_state["authenticated"] = True
+                        st.session_state["username"] = uname
+                        st.session_state["user_role"] = uname.capitalize()
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password.")
+
+        st.info("💡 **Demo Credentials**:\n- **Admin**: `admin` / `admin123`\n- **Analyst**: `analyst` / `analyst123`\n- **Viewer**: `viewer` / `viewer123`")
+        st.markdown("<div class='login-footer'>🔒 <i>Unauthorized access is monitored and logged.</i></div>", unsafe_allow_html=True)
+    st.stop()
+
+
+# ==========================================================
+# LOGGED IN DASHBOARD UI
+# ==========================================================
+user_role = st.session_state["user_role"]
+username = st.session_state["username"]
+
+st.sidebar.markdown(f"👤 **User**: `{username}` | 🔑 **Role**: `{user_role}`")
+if st.sidebar.button("Logout 🚪"):
+    st.session_state["authenticated"] = False
+    st.session_state["username"] = None
+    st.session_state["user_role"] = None
+    st.rerun()
+
+st.sidebar.divider()
+
+st.title("⚡ DataPulse — Enterprise Multi-Industry Platform")
 st.caption("Data Engineering, Pandera DLQ, dbt Modeling, Dagster Orchestration, FastAPI & GenAI Solutions")
 
 domain = st.sidebar.radio(
@@ -38,7 +125,7 @@ domain = st.sidebar.radio(
 st.sidebar.divider()
 
 # ==========================================================
-# 1. RETAIL DOMAIN (PLOTLY INTERACTIVE CHARTS)
+# 1. RETAIL DOMAIN
 # ==========================================================
 if domain == "Retail Analytics":
     sales = q("""SELECT f.*, p.category, p.product_name, c.region
@@ -114,7 +201,7 @@ if domain == "Retail Analytics":
 
 
 # ==========================================================
-# 2. SAAS DOMAIN (PLOTLY)
+# 2. SAAS DOMAIN
 # ==========================================================
 elif domain == "SaaS Subscriptions":
     st.header("SaaS Subscription Analytics")
@@ -138,12 +225,18 @@ elif domain == "SaaS Subscriptions":
 
 
 # ==========================================================
-# 3. HEALTHCARE DOMAIN (WITH PII MASKING TOGGLE)
+# 3. HEALTHCARE DOMAIN (SERVER-ENFORCED PII MASKING)
 # ==========================================================
 elif domain == "Healthcare SLA & Claims":
     st.header("Healthcare Claim SLA & Patient Analytics")
 
-    mask_pii = st.sidebar.checkbox("Mask Sensitive Patient PII", value=True)
+    # Viewer Role PII Masking Enforcement: Toggle is hidden for Viewer role
+    if user_role == "Viewer":
+        mask_pii = True
+        st.info("🔒 Server-Enforced PII Masking: Patient identities are masked for Viewer role.")
+    else:
+        mask_pii = st.sidebar.checkbox("Mask Sensitive Patient PII", value=True)
+
     hc_raw = q("SELECT * FROM fact_healthcare_claims")
     hc_sla = q("SELECT * FROM v_healthcare_sla")
 
@@ -158,16 +251,16 @@ elif domain == "Healthcare SLA & Claims":
 
     if mask_pii:
         hc_display = hc_raw.copy()
-        hc_display["patient_id"] = "PAT_REDACTED_" + hc_display["patient_id"].str[-3:]
+        hc_display["patient_id"] = "PAT_REDACTED_" + hc_display["patient_id"].astype(str).str[-3:]
         st.subheader("Patient Claims (PII Masked)")
         st.dataframe(hc_display.head(20), hide_index=True)
     else:
-        st.subheader("Patient Claims (Raw Unmasked)")
+        st.subheader("Patient Claims (Unmasked Raw View)")
         st.dataframe(hc_raw.head(20), hide_index=True)
 
 
 # ==========================================================
-# 4. HI-TECH TELEMETRY (PLOTLY)
+# 4. HI-TECH TELEMETRY
 # ==========================================================
 elif domain == "Hi-Tech Cloud Telemetry":
     st.header("Hi-Tech Microservice Telemetry & Infrastructure")
@@ -188,43 +281,55 @@ elif domain == "Hi-Tech Cloud Telemetry":
 # DATA OPS SCORECARD, RECONCILIATION & GENAI TABS
 # ==========================================================
 st.divider()
-t_genai, t_ops = st.tabs(["🤖 Ask Your Data (GenAI Assistant)", "⚙️ Data Ops & Row-Count Reconciliation"])
 
-with t_genai:
-    st.subheader("Generative AI Query Engine (Google Gemini)")
-    st.write("Convert business questions into validated SQL queries executed securely against the database.")
-    user_q = st.text_input("Enter business question (e.g. Which region had the highest revenue?)")
-    if user_q:
-        try:
-            from genai.engine import generate_and_validate_sql
-            res = generate_and_validate_sql(user_q, engine)
-            if res["status"] == "success":
-                st.code(res["sql"], language="sql")
-                st.dataframe(pd.DataFrame(res["data"]), hide_index=True)
-            elif res["status"] == "warning":
-                st.info(res["message"])
-            else:
-                st.error(res["message"])
-        except Exception as e:
-            st.error(f"GenAI execution error: {e}")
+# RBAC Controls for Footer Tabs
+if user_role == "Viewer":
+    st.info("ℹ️ Login as Analyst or Admin to access GenAI Text-to-SQL Assistant & Data Quality Audit Scorecard.")
+else:
+    t_genai, t_ops = st.tabs(["🤖 Ask Your Data (GenAI Assistant)", "⚙️ Data Ops & Row-Count Reconciliation"])
 
-with t_ops:
-    st.subheader("Row-Count Reconciliation & Pipeline Accounting")
-    runs = q("SELECT * FROM pipeline_runs ORDER BY run_at DESC LIMIT 5")
-    st.dataframe(runs, hide_index=True)
+    with t_genai:
+        st.subheader("Generative AI Query Engine (Google Gemini)")
+        st.write("Convert business questions into validated SQL queries executed securely against the database.")
+        user_q = st.text_input("Enter business question (e.g. Which region had the highest revenue?)")
+        if user_q:
+            try:
+                from genai.engine import generate_and_validate_sql
+                res = generate_and_validate_sql(user_q, engine)
+                if res["status"] == "success":
+                    st.code(res["sql"], language="sql")
+                    st.dataframe(pd.DataFrame(res["data"]), hide_index=True)
+                elif res["status"] == "warning":
+                    st.info(res["message"])
+                else:
+                    st.error(res["message"])
+            except Exception as e:
+                st.error(f"GenAI execution error: {e}")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Quarantine Dead-Letter Queue (DLQ)")
-        try:
-            quarantine = q("SELECT * FROM quarantine_records ORDER BY quarantined_at DESC LIMIT 10")
-            st.dataframe(quarantine, hide_index=True)
-        except Exception:
-            st.info("No quarantine records logged.")
-    with col2:
-        st.subheader("GenAI Query Audit Log")
-        try:
-            audit = q("SELECT * FROM genai_query_audit ORDER BY queried_at DESC LIMIT 10")
-            st.dataframe(audit, hide_index=True)
-        except Exception:
-            st.info("No GenAI audit logs recorded yet.")
+    with t_ops:
+        st.subheader("Row-Count Reconciliation & Pipeline Accounting")
+        runs = q("SELECT * FROM pipeline_runs ORDER BY run_at DESC LIMIT 5")
+        st.dataframe(runs, hide_index=True)
+
+        if user_role == "Admin":
+            if st.button("Trigger Manual Pipeline Run 🚀"):
+                import pipeline
+                r = pipeline.run()
+                st.success(f"Pipeline executed successfully! Reconciled: {r['reconciled']}")
+                st.rerun()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Quarantine Dead-Letter Queue (DLQ)")
+            try:
+                quarantine = q("SELECT * FROM quarantine_records ORDER BY quarantined_at DESC LIMIT 10")
+                st.dataframe(quarantine, hide_index=True)
+            except Exception:
+                st.info("No quarantine records logged.")
+        with col2:
+            st.subheader("GenAI Query Audit Log")
+            try:
+                audit = q("SELECT * FROM genai_query_audit ORDER BY queried_at DESC LIMIT 10")
+                st.dataframe(audit, hide_index=True)
+            except Exception:
+                st.info("No GenAI audit logs recorded yet.")

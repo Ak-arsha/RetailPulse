@@ -1,9 +1,15 @@
 """Database Schema Definitions & Engine Factory supporting PostgreSQL & SQLite fallback."""
 import os
+import hashlib
 from sqlalchemy import (create_engine, MetaData, Table, Column, String, Integer,
-                        Float, DateTime, Boolean, text, Index)
+                        Float, text)
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:///retail.db")
+
+
+def hash_password(password: str) -> str:
+    """Generates a secure SHA-256 hash for user passwords."""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def get_engine(url=DB_URL):
@@ -14,7 +20,7 @@ def get_engine(url=DB_URL):
 
 
 def init_db(engine=None):
-    """Initializes tables, constraints, indexes, quarantine DLQ, and audit logs."""
+    """Initializes tables, constraints, indexes, users table, quarantine DLQ, and audit logs."""
     if engine is None:
         engine = get_engine()
 
@@ -92,6 +98,17 @@ def init_db(engine=None):
         Column('created_at', String(30))
     )
 
+    # Users Table for RBAC Authentication
+    users = Table(
+        'users', meta,
+        Column('id', Integer, primary_key=True, autoincrement=True),
+        Column('username', String(50), unique=True, index=True),
+        Column('hashed_password', String(128)),
+        Column('role', String(20)),  # Admin, Analyst, Viewer
+        Column('is_active', Integer, default=1),
+        Column('created_at', String(30))
+    )
+
     # Quarantine Dead-Letter Queue (DLQ) Table
     quarantine = Table(
         'quarantine_records', meta,
@@ -109,12 +126,33 @@ def init_db(engine=None):
         Column('id', Integer, primary_key=True, autoincrement=True),
         Column('user_query', String(500)),
         Column('generated_sql', String(1000)),
+        Column('user_role', String(20)),
         Column('execution_status', String(20)),
         Column('execution_time_ms', Float),
         Column('queried_at', String(30))
     )
 
     meta.create_all(engine)
+
+    # Seed Default RBAC Users if empty
+    with engine.begin() as con:
+        try:
+            res = con.execute(text("SELECT COUNT(*) FROM users")).fetchone()
+            if res and res[0] == 0:
+                demo_users = [
+                    ("admin", hash_password("admin123"), "Admin", 1, "2026-10-01 00:00:00"),
+                    ("analyst", hash_password("analyst123"), "Analyst", 1, "2026-10-01 00:00:00"),
+                    ("viewer", hash_password("viewer123"), "Viewer", 1, "2026-10-01 00:00:00")
+                ]
+                for u in demo_users:
+                    con.execute(
+                        text("INSERT INTO users (username, hashed_password, role, is_active, created_at) VALUES (:u, :p, :r, :a, :c)"),
+                        {"u": u[0], "p": u[1], "r": u[2], "a": u[3], "c": u[4]}
+                    )
+                print("[Database Schema] Seeded default RBAC users: admin, analyst, viewer.")
+        except Exception as e:
+            print(f"[Database Schema] User seed note: {e}")
+
     print(f"[Database Schema] Initialized tables and constraints on engine: {engine.url}")
     return meta
 
