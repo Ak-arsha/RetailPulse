@@ -1,0 +1,173 @@
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+
+\geometry{left=0.5in, top=0.4in, right=0.5in, bottom=0.4in}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\vhrulefill{0.4pt} \vspace{-5pt}]
+
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabularx}{\textwidth}{X r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabularx}{\textwidth}{X r}
+      \small#1 & #2 \\
+    \end{tabularx}\vspace{-6pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, label={$\bullet$}]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape AKARSHA AGARWAL} \\ \vspace{4pt}
+    \small 
+    Phone: \href{tel:+916387671250}{+91 6387671250} \ $|$ \ 
+    Email: \href{mailto:akarshaagarwal25@gmail.com}{akarshaagarwal25@gmail.com} \ $|$ \ 
+    LinkedIn: \href{https://linkedin.com/in/akarsha-agarwal}{Akarsha Agarwal} \ $|$ \ 
+    GitHub: \href{https://github.com/Ak-arsha}{Ak-arsha}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{EDUCATION}
+  \resumeSubHeadingListStart
+    \item
+      \begin{tabularx}{\textwidth}{|p{2.2cm}|X|p{6.5cm}|p{2.2cm}|}
+        \hline
+        \textbf{Year} & \textbf{Degree / Certificate} & \textbf{Institute} & \textbf{CGPA / \%} \\ \hline
+        2023 -- 2027 & B.Tech, Computer Science \& Engineering & Jaypee Institute of Information Technology, Noida & 7.17 / 10.0 \\ \hline
+        2022 -- 2023 & Class XII, CMS Rajendra Nagar 1 & Lucknow, Uttar Pradesh & 94.75\% \\ \hline
+        2021 -- 2022 & Class X, CMS Rajendra Nagar 1 & Lucknow, Uttar Pradesh & 93.8\% \\ \hline
+      \end{tabularx}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{EXPERIENCE}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Python Developer}{\href{https://eglogics.com/}{Eglogics Softech Pvt. Ltd.}}
+      {Mar 2026 -- Apr 2026}{}
+      \resumeItemListStart
+        \resumeItem{Built an automated face-recognition attendance system in Python and OpenCV that identifies individuals via facial features and records attendance digitally, replacing manual tracking.}
+        \resumeItem{Integrated facial recognition with a Flask backend and SQL database, enabling faster, contactless attendance capture and reducing administrative workload and recording errors.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Research Intern}{\href{https://iitbhu.ac.in/}{IIT (BHU) Varanasi}}
+      {May 2026 -- Jul 2026}{}
+      \resumeItemListStart
+        \resumeItem{Developed PaddyCare AI, a deep learning system to classify 10 major paddy crop diseases plus healthy leaves from images, using YOLO and EfficientNet with transfer learning, data augmentation, and fine-tuning.}
+        \resumeItem{Built and deployed an inference pipeline with FastAPI and Streamlit to support early disease detection for farmers, aiding faster intervention and reduced crop loss.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{TECHNICAL SKILLS}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages:}{ C, C++, Python, Java, SQL, JavaScript, PHP} \\
+     \textbf{Data Engineering \& Cloud:}{ PySpark, SQL (PostgreSQL, SQLite), dbt, SQLAlchemy, Pandera, Docker, AWS (S3, EC2, ECR), Dagster, REST APIs, Git/GitHub} \\
+     \textbf{ML / DL \& CV:}{ PyTorch, TensorFlow, OpenCV, Scikit-learn, XGBoost, LightGBM, MediaPipe, YOLO, EfficientNet, spaCy, Transformers} \\
+     \textbf{Web \& Frameworks:}{ FastAPI, Streamlit, Plotly, Flask, Django, Django REST Framework, React.js, Node.js, WebRTC} \\
+     \textbf{Databases \& Tools:}{ PostgreSQL, Supabase, SQLite, Jupyter Notebook, VS Code, Google Colab} \\
+     \textbf{Competitive Programming:}{ 1388 rating on Codeforces (\href{https://codeforces.com/profile/Akarsha__Agarwal}{Akarsha\_\_Agarwal}) $\cdot$ 300+ problems on LeetCode (\href{https://leetcode.com/u/Akarsha11}{Akarsha11}) $\cdot$ 360+ problems on TUF+ (\href{https://takeuforward.org/}{Akarsha})}
+    }}
+ \end{itemize}
+
+%-----------PROJECTS-----------
+\section{PROJECTS}
+  \resumeSubHeadingListStart
+
+    \resumeProjectHeading
+      {\textbf{DataPulse -- Enterprise Multi-Industry Data Platform} (\href{https://retailpulse-kusoong2ux9ifqhtrhrznb.streamlit.app/}{Live Demo} $|$ \href{https://github.com/Ak-arsha/RetailPulse}{GitHub})}{}
+      {\textit{\small Python, SQL, PySpark, FastAPI, PostgreSQL, Pandera, dbt, Streamlit, Plotly, Docker, AWS, Gemini API, Dagster}}
+      \resumeItemListStart
+        \resumeItem{Architected an automated multi-domain ETL data engineering pipeline ingesting 25K+ raw records across Retail, SaaS, Healthcare, and Hi-Tech verticals with Pandera DLQ validation and a 100\% row-count reconciliation assertion (\texttt{Raw = Clean + Quarantine + Duplicates}).}
+        \resumeItem{Modeled a PostgreSQL Star Schema database with CTEs, Window Functions (\texttt{NTILE}), Slowly Changing Dimensions (SCD2), and dbt marts (\texttt{v\_customer\_rfm}, \texttt{v\_saas\_metrics}, \texttt{v\_healthcare\_sla}, \texttt{v\_hitech\_telemetry}) to power executive dashboards.}
+        \resumeItem{Developed a multi-tenant Streamlit + Plotly interactive dashboard with JWT auth/RBAC (Admin, Analyst, Viewer), server-enforced PII masking for healthcare data, and a Google Gemini Text-to-SQL assistant backed by a secured FastAPI REST API.}
+      \resumeItemListEnd
+
+    \resumeProjectHeading
+      {\textbf{Picture Perfect -- AI-Powered Image Editing Studio} (\href{https://github.com/Ak-arsha/Picture-Perfect}{Link})}{}
+      {\textit{\small Python, Streamlit, OpenCV, MediaPipe, Gemini API, Supabase}}
+      \resumeItemListStart
+        \resumeItem{Built an interactive web studio for real-time image editing with automated smile enhancement and gaze correction using MediaPipe Face Mesh, plus natural-language photo editing powered by the Gemini API.}
+      \resumeItemListEnd
+
+    \resumeProjectHeading
+      {\textbf{KrishiMitra -- AI Farm Advisory Platform} (\href{https://github.com/Ak-arsha/KrishiMitra}{Link})}{}
+      {\textit{\small Next.js, FastAPI, XGBoost, LightGBM, Supabase}}
+      \resumeItemListStart
+        \resumeItem{Built a full-stack advisory platform for farmers with ML-based 5-day crop price forecasting, an explainable-AI panel, and a geo-spatial buyer recommendation engine using the haversine formula.}
+        \resumeItem{Designed a sell/store decision engine comparing live market prices to government MSP floors, with JWT/Google OAuth authentication and a FastAPI + PostgreSQL (Supabase) backend.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+%-----------PUBLICATIONS-----------
+\section{PUBLICATIONS}
+  \resumeSubHeadingListStart
+    \resumeProjectHeading
+      {\textbf{LocalMark: Robust Localised Message Watermarking for Secure Digital Image Copyright Protection} -- \textit{Under review, Journal of the Franklin Institute (2026)}}{ }
+      \resumeItemListStart
+        \resumeItem{Co-authored a U-Net-based watermarking framework for embedding patient-identifying messages into medical retinal images; contributed to data curation and manuscript drafting. Proposed Enhanced Robust Decoder achieved 96\% bit accuracy and 48.27 dB PSNR across 24 real-world image attacks, outperforming four baseline architectures.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------ACHIEVEMENTS-----------
+\section{ACHIEVEMENTS}
+  \resumeItemListStart
+    \resumeItem{Selected for the presentation round of Smart India Hackathon 2024 for a solution built around the ``Root of Trust'' problem statement.}
+    \resumeItem{Selected as Team Lead of the AI/ML Domain under GDG (Google Developers Group), Jaypee Institute of Information Technology.}
+  \resumeItemListEnd
+
+\end{document}

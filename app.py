@@ -13,49 +13,98 @@ st.set_page_config(
     layout="wide"
 )
 
-# House Palette Config
-HOUSE_PALETTE = ["#1B3A5C", "#0D9488", "#D97706", "#64748B"]
+# House Palette Config (Dark Cyber / Slate Navy Theme)
+HOUSE_PALETTE = ["#00F0FF", "#3B82F6", "#14B8A6", "#8B5CF6", "#F59E0B"]
 
-# Inject Clean Global CSS Styling (NO EMOJIS)
+
+def style_fig(fig):
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(15, 23, 42, 0.6)",
+        plot_bgcolor="rgba(15, 23, 42, 0.6)",
+        font=dict(color="#94A3B8", family="sans-serif"),
+        title_font=dict(color="#F8FAFC", size=14),
+        margin=dict(l=20, r=20, t=40, b=20),
+    )
+    return fig
+
+
+# Inject Clean Global CSS Styling (Dark Executive Theme, NO EMOJIS)
 st.markdown("""
 <style>
   #MainMenu, footer, header {visibility: hidden;}
-  .block-container {padding-top: 1.5rem; padding-bottom: 3rem;}
-  h1 {font-size: 1.9rem; letter-spacing: -0.5px; color: #1B3A5C; font-weight: 700;}
-  h2 {font-size: 1.25rem; color: #1B3A5C; border-bottom: 2px solid #E5EAF0; padding-bottom: 6px; font-weight: 600;}
-  [data-testid="stMetric"] {
-      background: #F4F6F9; border: 1px solid #E5EAF0;
-      border-radius: 8px; padding: 14px 16px;
+  .block-container {padding-top: 1.2rem; padding-bottom: 3rem;}
+
+  .stApp {
+      background-color: #0F172A;
+      color: #F8FAFC;
   }
-  [data-testid="stMetricValue"] {font-size: 1.6rem; color: #1B3A5C; font-weight: 700;}
+
+  [data-testid="stSidebar"] {
+      background-color: #0B132B;
+      border-right: 1px solid #1E293B;
+  }
+  [data-testid="stSidebar"] * {
+      color: #E2E8F0 !important;
+  }
+
+  [data-testid="stMetric"] {
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  }
+  [data-testid="stMetricLabel"] {
+      color: #94A3B8 !important;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+  }
+  [data-testid="stMetricValue"] {
+      color: #F8FAFC !important;
+      font-size: 1.75rem;
+      font-weight: 700;
+  }
+
+  h1 { font-size: 1.85rem; letter-spacing: -0.5px; color: #F8FAFC; font-weight: 700; }
+  h2 { font-size: 1.25rem; color: #F8FAFC; border-bottom: 2px solid #1E293B; padding-bottom: 8px; font-weight: 600; margin-top: 10px; }
+  h3 { font-size: 1.1rem; color: #38BDF8; font-weight: 600; }
+  h4 { font-size: 1.0rem; color: #F8FAFC; font-weight: 600; }
+
   .navbar {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 24px; background: #FFFFFF; border-bottom: 1px solid #E5EAF0; margin-bottom: 24px;
+      padding: 14px 28px; background: #0B132B; border: 1px solid #1E293B; margin-bottom: 24px; border-radius: 8px;
   }
   .trusted-strip {
       display: flex; justify-content: center; align-items: center; gap: 32px;
-      padding: 16px 0; background: #F8FAFC; border-top: 1px solid #E5EAF0; border-bottom: 1px solid #E5EAF0;
-      color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      padding: 14px 0; background: #1E293B; border: 1px solid #334155; border-radius: 8px;
+      color: #94A3B8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;
   }
   .capability-card {
-      background: #F8FAFC; border: 1px solid #E5EAF0; border-radius: 8px;
-      padding: 20px; height: 100%; color: #1F2933;
+      background: #1E293B; border: 1px solid #334155; border-radius: 10px;
+      padding: 20px; height: 100%; color: #94A3B8; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
-  .capability-card h4 { color: #1B3A5C; margin-bottom: 8px; font-weight: 600; }
+  .capability-card h4 { color: #38BDF8; margin-bottom: 8px; font-weight: 600; }
   .architecture-strip {
-      background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 8px;
-      padding: 16px; text-align: center; font-weight: 600; color: #1B3A5C; margin: 24px 0;
+      background: #1E293B; border: 1px solid #334155; border-radius: 8px;
+      padding: 16px; text-align: center; font-weight: 600; color: #38BDF8; margin: 24px 0;
   }
   .landing-footer {
-      background: #1B3A5C; color: #F8FAFC; padding: 24px 32px;
-      display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-top: 40px;
+      background: #0B132B; color: #94A3B8; padding: 24px 32px;
+      display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-top: 40px; border: 1px solid #1E293B;
   }
-  .landing-footer a { color: #93C5FD; text-decoration: none; margin-left: 16px; }
+  .landing-footer a { color: #38BDF8; text-decoration: none; margin-left: 16px; }
   .auth-card {
       max-width: 380px; margin: 20px auto; padding: 28px; border-radius: 10px;
-      background: #FFFFFF; border: 1px solid #E5EAF0; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      background: #1E293B; border: 1px solid #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   }
-  .auth-footer-note { font-size: 11px; color: #64748B; text-align: center; margin-top: 16px; }
+  .auth-footer-note { font-size: 11px; color: #94A3B8; text-align: center; margin-top: 16px; }
+
+  .stTabs [data-baseweb="tab-list"] { gap: 12px; border-bottom: 1px solid #334155; }
+  .stTabs [data-baseweb="tab"] { height: 44px; background-color: transparent; border-radius: 6px 6px 0 0; color: #94A3B8; font-weight: 600; }
+  .stTabs [aria-selected="true"] { background-color: #1E293B !important; color: #38BDF8 !important; border-bottom: 2px solid #38BDF8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -477,14 +526,14 @@ if domain == "Retail Analytics":
             df_mon = f.groupby("order_month").revenue.sum().reset_index()
             fig_mon = px.line(df_mon, x="order_month", y="revenue", title="Monthly Revenue Trend (₹)",
                               labels={"order_month": "Month", "revenue": "Revenue (₹)"},
-                              template="plotly_white", color_discrete_sequence=[HOUSE_PALETTE[0]], height=300)
-            st.plotly_chart(fig_mon, use_container_width=True)
+                              color_discrete_sequence=[HOUSE_PALETTE[0]], height=300)
+            st.plotly_chart(style_fig(fig_mon), use_container_width=True)
         with col2:
             df_cat = f.groupby("category").revenue.sum().reset_index()
             fig_cat = px.bar(df_cat, x="category", y="revenue", title="Category Sales Breakdown (₹)",
                              labels={"category": "Category", "revenue": "Revenue (₹)"},
-                             template="plotly_white", color_discrete_sequence=[HOUSE_PALETTE[1]], height=300)
-            st.plotly_chart(fig_cat, use_container_width=True)
+                             color_discrete_sequence=[HOUSE_PALETTE[1]], height=300)
+            st.plotly_chart(style_fig(fig_cat), use_container_width=True)
 
     with t2:
         rfm = q("SELECT * FROM v_customer_rfm")
@@ -493,8 +542,8 @@ if domain == "Retail Analytics":
         fig_rfm = px.scatter(rfm, x="recency_days", y="monetary", color="segment", size="frequency",
                              hover_data=["customer_id"], title="Customer RFM Segmentation Matrix",
                              labels={"recency_days": "Recency (Days)", "monetary": "Monetary Value (₹)"},
-                             template="plotly_white", color_discrete_sequence=HOUSE_PALETTE, height=320)
-        st.plotly_chart(fig_rfm, use_container_width=True)
+                             color_discrete_sequence=HOUSE_PALETTE, height=320)
+        st.plotly_chart(style_fig(fig_rfm), use_container_width=True)
 
 
 # ==========================================================
@@ -502,7 +551,7 @@ if domain == "Retail Analytics":
 # ==========================================================
 elif domain == "SaaS Subscriptions":
     st.markdown("<h2>SaaS Subscription ARR/MRR & Retention Analytics</h2>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:14px;color:#475569;margin-bottom:12px;font-style:italic;'>Tracks Monthly Recurring Revenue (MRR), subscriber plan tiers, and customer churn rates across subscription cohorts.</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:14px;color:#94A3B8;margin-bottom:12px;font-style:italic;'>Tracks Monthly Recurring Revenue (MRR), subscriber plan tiers, and customer churn rates across subscription cohorts.</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:12px;color:#64748B;margin-bottom:12px;'>Data last refreshed: {last_refreshed}</div>", unsafe_allow_html=True)
 
     saas = q("SELECT * FROM fact_saas_subscriptions")
@@ -519,12 +568,12 @@ elif domain == "SaaS Subscriptions":
     with col1:
         fig_saas1 = px.bar(metrics, x="tier", y="total_mrr", title="MRR Contribution by Plan Tier ($)",
                            labels={"tier": "Plan Tier", "total_mrr": "Total MRR ($)"},
-                           template="plotly_white", color_discrete_sequence=[HOUSE_PALETTE[0]], height=300)
-        st.plotly_chart(fig_saas1, use_container_width=True)
+                           color_discrete_sequence=[HOUSE_PALETTE[0]], height=300)
+        st.plotly_chart(style_fig(fig_saas1), use_container_width=True)
     with col2:
         fig_saas2 = px.pie(metrics, values="total_customers", names="tier", title="Subscriber Tier Share",
-                           template="plotly_white", color_discrete_sequence=HOUSE_PALETTE, height=300)
-        st.plotly_chart(fig_saas2, use_container_width=True)
+                           color_discrete_sequence=HOUSE_PALETTE, height=300)
+        st.plotly_chart(style_fig(fig_saas2), use_container_width=True)
 
 
 # ==========================================================
@@ -532,7 +581,7 @@ elif domain == "SaaS Subscriptions":
 # ==========================================================
 elif domain == "Healthcare SLA & Claims":
     st.markdown("<h2>Healthcare Patient Claim Turnaround & SLA Monitoring</h2>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:14px;color:#475569;margin-bottom:12px;font-style:italic;'>Monitors patient claim turnaround hours, 24-hour SLA breach compliance rates, and hospital readmission statistics.</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:14px;color:#94A3B8;margin-bottom:12px;font-style:italic;'>Monitors patient claim turnaround hours, 24-hour SLA breach compliance rates, and hospital readmission statistics.</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:12px;color:#64748B;margin-bottom:12px;'>Data last refreshed: {last_refreshed}</div>", unsafe_allow_html=True)
 
     if user_role.lower() == "viewer":
@@ -552,8 +601,8 @@ elif domain == "Healthcare SLA & Claims":
 
     fig_hc = px.bar(hc_sla, x="claim_type", y="sla_breach_pct", title="SLA Breach Rate (%) (>24 Hours)",
                     labels={"claim_type": "Claim Type", "sla_breach_pct": "SLA Breach Rate (%)"},
-                    template="plotly_white", color_discrete_sequence=[HOUSE_PALETTE[2]], height=300)
-    st.plotly_chart(fig_hc, use_container_width=True)
+                    color_discrete_sequence=[HOUSE_PALETTE[2]], height=300)
+    st.plotly_chart(style_fig(fig_hc), use_container_width=True)
 
     if mask_pii:
         hc_display = hc_raw.copy()
@@ -570,7 +619,7 @@ elif domain == "Healthcare SLA & Claims":
 # ==========================================================
 elif domain == "Hi-Tech Cloud Telemetry":
     st.markdown("<h2>Hi-Tech Microservice Telemetry & Infrastructure Analytics</h2>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:14px;color:#475569;margin-bottom:12px;font-style:italic;'>Evaluates microservice API response latencies (ms), infrastructure compute costs ($), and system error rates.</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:14px;color:#94A3B8;margin-bottom:12px;font-style:italic;'>Evaluates microservice API response latencies (ms), infrastructure compute costs ($), and system error rates.</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='font-size:12px;color:#64748B;margin-bottom:12px;'>Data last refreshed: {last_refreshed}</div>", unsafe_allow_html=True)
 
     ht = q("SELECT * FROM v_hitech_telemetry")
@@ -584,8 +633,8 @@ elif domain == "Hi-Tech Cloud Telemetry":
 
     fig_ht = px.bar(ht, x="service_name", y="avg_latency_ms", title="Microservice API Response Latency (ms)",
                     labels={"service_name": "Service Name", "avg_latency_ms": "Avg Latency (ms)"},
-                    template="plotly_white", color_discrete_sequence=[HOUSE_PALETTE[1]], height=300)
-    st.plotly_chart(fig_ht, use_container_width=True)
+                    color_discrete_sequence=[HOUSE_PALETTE[1]], height=300)
+    st.plotly_chart(style_fig(fig_ht), use_container_width=True)
 
 
 # ==========================================================
