@@ -6,9 +6,11 @@ import streamlit as st
 import plotly.express as px
 from sqlalchemy import create_engine
 
+LOGO_PATH = "datapulse_favicon.png" if os.path.exists("datapulse_favicon.png") else ("datapulse_favicon_64.png" if os.path.exists("datapulse_favicon_64.png") else None)
+
 st.set_page_config(
     page_title="DataPulse | Enterprise Analytics Platform",
-    page_icon="datapulse_favicon_64.png" if os.path.exists("datapulse_favicon_64.png") else "⚡",
+    page_icon=LOGO_PATH if LOGO_PATH else "⚡",
     layout="wide"
 )
 
@@ -68,8 +70,8 @@ if "authenticated" not in st.session_state:
 if not st.session_state["authenticated"]:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if os.path.exists("datapulse_favicon_64.png"):
-            st.image("datapulse_favicon_64.png", width=64)
+        if LOGO_PATH:
+            st.image(LOGO_PATH, width=64)
         st.markdown("<h2 style='text-align:center;'>DataPulse Authentication</h2>", unsafe_allow_html=True)
         st.caption("Sign in with enterprise credentials to access multi-industry analytics & GenAI solutions.")
 
@@ -109,8 +111,8 @@ if not st.session_state["authenticated"]:
 # ==========================================================
 head_col1, head_col2 = st.columns([1, 14])
 with head_col1:
-    if os.path.exists("datapulse_favicon_64.png"):
-        st.image("datapulse_favicon_64.png", width=52)
+    if LOGO_PATH:
+        st.image(LOGO_PATH, width=52)
 with head_col2:
     st.markdown("""
     <div style="padding-top:4px;">
